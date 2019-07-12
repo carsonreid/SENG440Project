@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#define LONG_MAX 0x3FFFFF
+#define LONG_MAX 0xFFFFFFFFUL
 
 unsigned long * rshift1024(unsigned long input[]) {
 	register int i = 0;
@@ -35,9 +35,8 @@ unsigned long * add64(unsigned long a[], unsigned long b[]) {
 	for(i = 1; i >= 0; i--){
 		a[i] += carryFlag;
 		carryFlag = 0;
-		if(b[i] > LONG_MAX - a[i]) {
+		if(b[i] > (LONG_MAX - a[i])) {
 			carryFlag = 1;
-			printf("needed to carry \n");
 		}
 		a[i] += b[i];
 	}
