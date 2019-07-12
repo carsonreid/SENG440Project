@@ -107,6 +107,6 @@ int main(int argc, char *argv[]) {
 	printSmolBinary(addarr4);
 	unsigned long * addarrresult2 = add64(addarr3, addarr4);
 	printSmolBinary(addarrresult2);
-	//printf("%d\n", D);
+	
 	return 0;
 }	
