@@ -3,6 +3,9 @@
 #include <math.h>
 #define LONG_MAX 0xFFFFFFFFUL
 
+void printSmolBinary(unsigned long input[]);
+
+
 unsigned long * rshift1024(unsigned long input[]) {
 	register int i = 0;
 	register long carryBits = 0;
@@ -43,6 +46,18 @@ unsigned long * add64(unsigned long a[], unsigned long b[]) {
 	return a;
 }
 
+unsigned long * prescale1024(unsigned long input[], int numInputLongs){
+	long * prescaled = calloc(1024+numInputLongs, sizeof(unsigned long));
+	long * tmp = prescaled;
+	register int i;
+	for(i = 0; i < numInputLongs; i++){
+		*tmp = input[i];
+		*tmp++;
+	}
+	return prescaled;
+}
+
+
 void printBinary(long input[]) {
 	int i = 0;
 	int j = 0;
@@ -62,7 +77,7 @@ void printBinary(long input[]) {
 void printSmolBinary(unsigned long input[]) {
 	int i = 0;
 	int j = 0;
-	while (i < 2) {
+	while (i < 4) {
 		for(j = 31; j >= 0; j--){
 			if ((input[i] >> (j)) & 1)
 				printf("1");
@@ -90,7 +105,7 @@ int main(int argc, char *argv[]) {
 	//unsigned long * newarr = rshift1024(arr);
 	unsigned long arry[2] = { 2032, 255 }; // 7 1s shifted left 4, then 8 1s
 	//unsigned long * newarry = rshift64(arry);
-	
+	/*
 	unsigned long addarr[2] = { 2991672907, 1305373492 };
 	unsigned long addarr2[2] = { 1303294388, 2989593803 };
 	printSmolBinary(addarr);
@@ -99,13 +114,16 @@ int main(int argc, char *argv[]) {
 	printSmolBinary(addarrresult);
 	
 	printf("\n");
-
+	
 	unsigned long addarr3[2] = { 1946157070, 2147483648 };
 	unsigned long addarr4[2] = { 134217731, 2147483648 };
 	printSmolBinary(addarr3);
 	printSmolBinary(addarr4);
 	unsigned long * addarrresult2 = add64(addarr3, addarr4);
 	printSmolBinary(addarrresult2);
-	
+	*/
+	printSmolBinary(arry);
+	long * prescaled = prescale1024(arry, 2);
+	printSmolBinary(prescaled);
 	return 0;
 }	
