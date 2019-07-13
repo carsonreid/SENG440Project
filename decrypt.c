@@ -47,7 +47,7 @@ unsigned long * add64(unsigned long a[], unsigned long b[]) {
 }
 
 unsigned long * prescale1024(unsigned long input[], int numInputLongs){
-	long * prescaled = calloc(1024+numInputLongs, sizeof(unsigned long));
+	long * prescaled = calloc(32+numInputLongs, sizeof(unsigned long));
 	long * tmp = prescaled;
 	register int i;
 	for(i = 0; i < numInputLongs; i++){
@@ -55,6 +55,28 @@ unsigned long * prescale1024(unsigned long input[], int numInputLongs){
 		*tmp++;
 	}
 	return prescaled;
+}
+
+unsigned long * padto1024(unsigned long input[], int numInputLongs){
+	long * padded = calloc(32, sizeof(unsigned long));
+	long * tmp = padded+(32-numInputLongs);
+	register int i;
+	for(i = 0; i < numInputLongs; i++){
+		*tmp = input[i];
+		*tmp++;
+	}
+	return padded;
+}
+
+unsigned long * padto64(unsigned long input[], int numInputLongs){
+	long * padded = calloc(2, sizeof(unsigned long));
+	long * tmp = padded+(2-numInputLongs);
+	register int i;
+	for(i = 0; i < numInputLongs; i++){
+		*tmp = input[i];
+		*tmp++;
+	}
+	return padded;
 }
 
 
@@ -125,5 +147,11 @@ int main(int argc, char *argv[]) {
 	printSmolBinary(arry);
 	long * prescaled = prescale1024(arry, 2);
 	printSmolBinary(prescaled);
+	
+
+	unsigned long shorty[1] = { 2041 };
+	printSmolBinary(shorty);
+	long * padded64 = padto64(shorty,1);
+	printSmolBinary(padded64);
 	return 0;
 }	
