@@ -148,24 +148,20 @@ long * subtract64(unsigned long * T, unsigned long * M){
 	unsigned long tmpM;
 	unsigned int cfi;
 	unsigned int carryCheckBit;
-
+    register int imod;
 	register int i;
 	for(i = 0; i < 64; i++){
-		//printf("i: %d, %p\n", i, T);
-		//printf("hey");
-		tmpT = T[i/32] & (0x1 << i%32); //maybe replace i%32 with a temp
-		tmpM = M[i/32] & (0x1 << i%32);
-		//printf("%d", (tmpT == 1 ? 1: 0));
-		fflush(stdin);
+        imod = i%32;
+		tmpT = T[i/32] & (0x1 << imod); //maybe replace i%32 with a temp
+		tmpM = M[i/32] & (0x1 << imod);
 		if(tmpT & tmpM) { //1-1
-			T[i/32] = T[i/32] ^ (0x1 << i%32); 
-			//set T(i) to 0
+			T[i/32] = T[i/32] ^ (0x1 << imod);
 		}
 		else if(!tmpM) {} //1-0 or 0-0
 		else { //0-1
 			//borrow
 			cfi = i;
-			carryCheckBit = (T[i/32] & (0x1 << i%32)) >> i%32;
+			carryCheckBit = (T[i/32] & (0x1 << imod)) >> imod;
 			while(!carryCheckBit){
 				T[cfi/32] = T[cfi/32] | (0x1 << cfi%32);
 				cfi++;
