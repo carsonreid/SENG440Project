@@ -5,7 +5,7 @@
 int main(void) {
 	printf("Boo\n");
 	unsigned int E = 1887; // = 3*17*37
-	unsigned int P = 53; // randomly chose // PQ = 3127
+	unsigned int P = 53; // randomly chose // PQ = 000000000000000003127
 	unsigned int Q = 59; // randomly chose
 	unsigned int D = 943; //computed by this function
 	unsigned int X = 0; // tmp stuff for calculating D

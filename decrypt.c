@@ -304,7 +304,7 @@ int main(int argc, char *argv[]) {
 
 
 
-/*
+
 	unsigned long * xtest = calloc(32, sizeof(unsigned long));
 	unsigned long * ytest = calloc(32, sizeof(unsigned long));
 	xtest[0] += 17;
@@ -313,6 +313,6 @@ int main(int argc, char *argv[]) {
 	PQarr[0] = 23;
 
 	printSmolBinary(bitwiseMMM(xtest, ytest, PQarr));
-*/
+
 	return 0;
 }	
