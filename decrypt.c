@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -12,8 +13,8 @@ unsigned long * rshift1024(unsigned long * input) {
 	register long carryBits = 0;
 	for(i = 0; i < 32; i++){
 		input[i] += carryBits;
-		carryBits = input[i] & 3;
-		input[i] >>= 2;
+		carryBits = input[i] & 1;
+		input[i] >>= 1;
 		carryBits <<= 32;
 	}
 	return input;
@@ -22,7 +23,7 @@ unsigned long * rshift1024(unsigned long * input) {
 unsigned long * add1024(unsigned long * a, unsigned long * b) {
 	register int i = 0;
 	register unsigned int carryFlag = 0;
-	for(i = 31; i >= 0; i--){
+	for(i = 0; i < 32; i++){
 		a[i] += carryFlag;
 		carryFlag = 0;
 		if(b[i] > LONG_MAX - a[i]) {
@@ -103,7 +104,7 @@ int alargerb64(long * a, long * b){
 * This function does bitwise unsigned subtraction. It works cause T will always be > M,
 * and the nasty bit does the borrow part of subtraction
 */
-long * subtract1024(unsigned long * T, unsigned long * M){ 
+unsigned long * subtract1024(unsigned long * T, unsigned long * M){ 
 	unsigned long tmpT;
 	unsigned long tmpM;
 	unsigned int cfi;
@@ -113,6 +114,7 @@ long * subtract1024(unsigned long * T, unsigned long * M){
 	for(; i < 1024; i++){
 		tmpT = T[i/32] & (0x1 << i%32); //maybe replace i%32 with a temp
 		tmpM = M[i/32] & (0x1 << i%32);
+		
 		if(tmpT & tmpM) { //1-1
 			T[i/32] = T[i/32] ^ (0x1 << i%32); 
 			//set T(i) to 0
@@ -130,9 +132,10 @@ long * subtract1024(unsigned long * T, unsigned long * M){
 			T[cfi/32] = T[cfi/32] ^ (0x1 << cfi%32);
 		}
 	}
+	return T;
 }
 
-long * subtract64(unsigned long * T, unsigned long * M){ 
+unsigned long * subtract64(unsigned long * T, unsigned long * M){ 
 	unsigned long tmpT;
 	unsigned long tmpM;
 	unsigned int cfi;
@@ -190,13 +193,16 @@ unsigned long * bitwiseMMM(unsigned long * x, unsigned long * y, unsigned long *
 			}
 			else {
 				unsigned long * tmp = calloc(32, sizeof(unsigned long));
-				add1024(tmp, T);
+				add1024(tmp, PQptr);
 				add1024(tmp, y);
 				add1024(T, tmp);
 				//free(tmp);
 				T = rshift1024(T);
 			}
 		}
+	}
+	if(alargerequalb1024(T, PQptr)) {
+		T = subtract1024(T, PQptr);
 	}
 	return T;
 }
@@ -379,3 +385,4 @@ int main(int argc, char *argv[]) {
 
 //P: 00f36475b06954f3ef0dece9a6af0fa3379bc819df00c97595afe2cc2c5749b33f
 //Q: 00e011e2301af8ceec4f3cb193d63cafa80e61015e9dd0d41c365ce7d68b0fa2ad
+
