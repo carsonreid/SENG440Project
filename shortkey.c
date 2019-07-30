@@ -1,49 +1,53 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
+#include <inttypes.h>
 #define LONG_MAX 0xFFFFFFFFUL
 #define P_Q 0xC37
+#define newline printf("\n");
 
-void printSmolBinary(unsigned long input[]);
+void printSmolBinary(uint32_t * input);
+void printHex(uint32_t * input);
+void print64Hex(uint64_t input);
 
-
-unsigned long * rshift1024(unsigned long * input) {
-	register int i = 0;
-	register long carryBits = 0;
-	for(i = 0; i < 1; i++){
-		input[i] += carryBits;
-		carryBits = input[i] & 1;
+uint32_t * rshift1024(uint32_t * input) {
+	register int i;
+	register uint32_t carryBit = 0, nextCarryBit = 0;
+	for(i = 1; i >= 0; i--){
+		nextCarryBit = input[i] & 1;
 		input[i] >>= 1;
-		carryBits <<= 32;
+		input[i] += carryBit;
+		nextCarryBit <<= 31;
+		carryBit = nextCarryBit;
 	}
 	return input;
 }
 
-unsigned long * add1024(unsigned long * a, unsigned long * b) {
+uint32_t * add1024(uint32_t * a, uint32_t * b) {
 	register int i = 0;
 	register unsigned int carryFlag = 0;
-	for(i = 0; i >= 0; i--){
+	uint32_t tmpa;
+	for(i = 0; i < 2; i++){
+		tmpa = a[i];
+		a[i] += b[i];
 		a[i] += carryFlag;
 		carryFlag = 0;
-		if(b[i] > LONG_MAX - a[i]) {
+		if(b[i] > (LONG_MAX - tmpa)) {
 			carryFlag = 1;
 		}
-		a[i] += b[i];
 	}
 	return a;
 }
 
-int alargerequalb1024(unsigned long * a, unsigned long * b){
+int alargerequalb1024(uint32_t * a, uint32_t * b){
 	register int i;
-	long temp;
-	for(i = 0; i < 1; i++){
-		temp = a[0]-b[0];
-		if(temp > 0) {
-			return 1;
-		}
-		else if(temp < 0) {
-			return 0;
-		}
+	for(i = 63; i >= 0; i--){
+		//temp = a[1-i]-b[1-i];
+		uint32_t abit = a[i/32] & (1 << i%32);
+		uint32_t bbit = b[i/32] & (1 << i%32);
+		if(abit && !bbit) return 1;
+		else if(!abit && bbit) return 0;
 	}
 	return 1;
 }
@@ -52,14 +56,14 @@ int alargerequalb1024(unsigned long * a, unsigned long * b){
 * This function does bitwise unsigned subtraction. It works cause T will always be > M,
 * and the nasty bit does the borrow part of subtraction
 */
-unsigned long * subtract1024(unsigned long * T, unsigned long * M){ 
-	unsigned long tmpT;
-	unsigned long tmpM;
+uint32_t * subtract1024(uint32_t * T, uint32_t * M){ 
+	uint32_t tmpT;
+	uint32_t tmpM;
 	unsigned int cfi;
 	unsigned int carryCheckBit;
 
 	register int i = 0;
-	for(; i < 32; i++){
+	for(; i < 64; i++){
 		tmpT = T[i/32] & (0x1 << i%32); //maybe replace i%32 with a temp
 		tmpM = M[i/32] & (0x1 << i%32);
 		
@@ -83,9 +87,9 @@ unsigned long * subtract1024(unsigned long * T, unsigned long * M){
 	return T;
 }
 
-unsigned long * bitwiseMMM(unsigned long * y, unsigned long * x, unsigned long * PQptr) {
+uint32_t * bitwiseMMM(uint32_t * y, uint32_t * x, uint32_t * PQptr) {
 	int i;
-	unsigned long * T = calloc(1, sizeof(unsigned long));
+	uint32_t * T = calloc(2, sizeof(uint32_t));
 	unsigned char xi;
 	unsigned char eta;
 	//printSmolBinary(x);
@@ -93,51 +97,125 @@ unsigned long * bitwiseMMM(unsigned long * y, unsigned long * x, unsigned long *
 	//printSmolBinary(PQptr);
 	//printf("\n\n");
 
-	for(i = 0; i < 8; i++){
+	for(i = 0; i < 56; i++){
 		
 		xi = (x[i/32] & (0x1 << i%32)) >> i%32;
 
 		//printf("i=%d first chunk: %ld, second: %ld, ", i, (*T) & 0x1, (xi & (y[0] & 1)));
 
-		eta = ((*T) & 0x1) ^ (xi & (y[0] & 0x1));
+		eta = (T[0] & 0x1) ^ (xi & (y[0] & 0x1));
 		//printf("%d %d ", xi, eta);
 		//printSmolBinary(T);
 		if(xi == 0) {
 			if(eta == 0) {
+				uint64_t big = T[1]; big <<= 32; big += T[0];
 				T = rshift1024(T);
+				uint64_t big2 = T[1]; big2 <<= 32; big2 += T[0];
+				if(big & 1) big--;
+				big >>= 1;
+				if(big != big2) { printf("BAD SHIFT1"); newline print64Hex(big); newline print64Hex(big2); newline }
 			}
-			else {
-				T = rshift1024(add1024(T, PQptr));
+			else {				
+				uint64_t big = T[1]; big <<= 32; big += T[0];
+				uint64_t big2 = PQptr[1]; big2 <<= 32; big2 += PQptr[0];
+				T = add1024(T, PQptr);
+				uint64_t big3 = T[1]; big3 <<= 32; big3 += T[0]; 
+				if((big+big2) != big3) { printf("BAD ADD2"); newline print64Hex(big); newline print64Hex(big2); newline print64Hex(big3); newline }
+
+				big2 = T[1]; big2 <<= 32; big2 += T[0];
+				if(big2 & 1) big2--;
+				big2 >>= 1;
+				T = rshift1024(T);
+				uint64_t big4 = T[1]; big4 <<= 32; big4 += T[0];
+				if(big2 != big4) { printf("BAD SHIFT3"); newline }
 			}
 		}
 		else {
 			if(eta == 0){
-				T = rshift1024(add1024(T, y));
+
+				uint64_t big = T[1]; big <<= 32; big += T[0];
+				uint64_t big2 = y[1]; big2 <<= 32; big2 += y[0];
+				T = add1024(T, y);
+				uint64_t big3 = T[1]; big3 <<= 32; big3 += T[0]; 
+				if((big+big2) != big3) { printf("BAD ADD4"); newline print64Hex(big); newline print64Hex(big2); newline print64Hex(big3); newline }
+
+				big2 = T[1]; big2 <<= 32; big2 += T[0];
+				if(big2 & 1) big2--;
+				big2 >>= 1;
+				T = rshift1024(T);
+				uint64_t big4 = T[1]; big4 <<= 32; big4 += T[0];
+				if(big2 != big4) { printf("BAD SHIFT5"); newline }
 			}
 			else {
-				unsigned long * tmp = calloc(1, sizeof(unsigned long));
-				add1024(tmp, PQptr);
-				add1024(tmp, y);
-				add1024(T, tmp);
+
+				uint32_t * tmp = calloc(2, sizeof(uint32_t));
+				uint64_t big = tmp[1]; big <<= 32; big += tmp[0];
+				uint64_t big2 = y[1]; big2 <<= 32; big2 += y[0];
+				tmp = add1024(tmp, y);
+				uint64_t big3 = tmp[1]; big3 <<= 32; big3 += tmp[0]; 
+				if((big+big2) != big3) { printf("BAD ADD6"); newline print64Hex(big); newline print64Hex(big2); newline print64Hex(big3); newline }
+
+
+				
+				uint64_t big9 = tmp[1]; big9 <<= 32; big9 += tmp[0];
+				uint64_t big8 = PQptr[1]; big8 <<= 32; big8 += PQptr[0];
+				tmp = add1024(tmp, PQptr);
+				uint64_t big7 = tmp[1]; big7 <<= 32; big7 += tmp[0]; 
+				if((big9+big8) != big7) { printf("BAD ADD7"); newline print64Hex(big9); newline print64Hex(big8); newline print64Hex(big7); newline }
+
+
+				uint64_t big11 = T[1]; big11 <<= 32; big11 += T[0];
+				uint64_t big12 = tmp[1]; big12 <<= 32; big12 += tmp[0];
+				T = add1024(T, tmp);
+				uint64_t big13 = T[1]; big13 <<= 32; big13 += T[0]; 
+				if((big11+big12) != big13) { printf("BAD ADD8"); newline print64Hex(big11); newline print64Hex(big12); newline print64Hex(big13); newline }
+
 				//free(tmp);
+
+				uint64_t big112 = T[1]; big112 <<= 32; big112 += T[0];
+				if(big112 & 1) big112--;
+				big112 >>= 1;
 				T = rshift1024(T);
+				uint64_t big114 = T[1]; big114 <<= 32; big114 += T[0];
+				if(big112 != big114) { printf("BAD SHIFT5"); newline }
+
 			}
 		}
 		//printSmolBinary(T);
 	}
+	uint64_t tes1 = T[1];
+	tes1 <<= 32;
+	tes1 += T[0];
+
+	uint64_t tes2 = PQptr[1];
+	tes2 <<= 32;
+	tes2 += PQptr[0];
+	int shouldbelarger = (tes1 >= tes2);
+
 	if(alargerequalb1024(T, PQptr)) {
-		
-		//printf("T 	: %lu\n", T[0]);
-		//printf("PQ 	: %lu\n", PQptr[0]);
+		uint64_t test1 = T[1];
+		test1 <<= 32;
+		test1 += T[0];
+		//print64Hex(	)
+		uint64_t test2 = PQptr[1];
+		test2 <<= 32;
+		test2 += PQptr[0];
 		T = subtract1024(T, PQptr);
-		//printf("TPQ	: %lu\n\n", T[0]);
+		uint64_t test3 = T[1];
+		test3 <<= 32;
+		test3 += T[0];
+		if(test3 != test1-test2) { printf("BAD SUBTRACT"); newline print64Hex(test1); newline print64Hex(test2); newline print64Hex(test3); newline }
+		//else printf("GOOD SUBTRACT"); newline
+	}
+	else if(shouldbelarger) {
+		printf("INCORRECT LARGENESS"); newline print64Hex(tes1); newline print64Hex(tes2); newline
 	}
 	//printf("\n");
 	return T;
 }
 
-void printSmolBinary(unsigned long input[]) {
-	int i = 0;
+void printSmolBinary(uint32_t input[]) {
+	int i = 1;
 	int j = 0;
 	while (i >= 0) {
 		for(j = 31; j >= 0; j--){
@@ -154,53 +232,62 @@ void printSmolBinary(unsigned long input[]) {
 		}
 		i--;
 	}
-	printf("\n");
+	//printf("\n");
 }
 
-
-unsigned long * copy1024(unsigned long * copyTo, unsigned long * copyFrom){
+uint32_t * copy1024(uint32_t * copyTo, uint32_t * copyFrom){
 	int i;
-	for(i = 0; i < 1; i++){
+	for(i = 0; i < 2; i++){
 		copyTo[i] = copyFrom[i];
 	}
 	return copyTo;
 }
 
-void printHex(unsigned long * input) {
-	int i = 0;
+void printHex(uint32_t * input) {
+	int i = 1;
 	for(; i >= 0; i--){
-		printf("%08lX", input[i]);
+		printf("%08" PRIx32, input[i]);
 	}
 	fflush(stdout);
 }
 
+void print64Hex(uint64_t input) {
+	int i = 0;
+	for(; i >= 0; i--){
+		printf("%016" PRIx64, input);
+	}
+	fflush(stdout);
+}
 
 int main(int argc, char *argv[]) {
 
-	unsigned long ptn = 0;
-	for(ptn = 0; ptn < 133; ptn++) {
-	unsigned long * D = calloc(1, sizeof(unsigned long));
-	D[0] = 65;
+	uint32_t ptn = 0x0058afff;
+	//for(ptn = 0; ptn < 133; ptn++) {
+	uint32_t * D = calloc(2, sizeof(uint32_t));
+	D[0] = 0x3245a881;
+	D[1] = 0x0053e5ff;
 
-	unsigned long * PQ = calloc(1, sizeof(unsigned long));
-	PQ[0] = 133;
+	uint32_t * PQ = calloc(2, sizeof(uint32_t));
+	PQ[0] = 0xb241a8f5;
+	PQ[1] = 0x00990617;
 
-	unsigned long E = 5;
+	uint32_t E = 0x10001;
 
-	unsigned long * Rsq = calloc(1, sizeof(unsigned long));
-	Rsq[0] = 100;
+	uint32_t * Rsq = calloc(2, sizeof(uint32_t));
+	Rsq[0] = 0x1ca22284;
+	Rsq[1] = 0x004d8c6b;
 	
-	unsigned long * R = calloc(1, sizeof(unsigned long));
-	R[0] = 123;
+	uint32_t * R = calloc(2, sizeof(uint32_t));
+	R[0] = 0x00000000;
+	R[1] = 0x00800000; 
 
-	unsigned long * testT = calloc(1, sizeof(unsigned long));
+	uint32_t * testT = calloc(2, sizeof(uint32_t));
 	testT[0] = ptn;//0x0A; //10
 	//printf("TestT: ");
 	//printSmolBinary(testT);
 	//printf("\n");
 	
-	unsigned long * tToPowerOf2 = calloc(1, sizeof(unsigned long));
-	tToPowerOf2[0] = testT[0];
+	uint32_t * tToPowerOf2 = calloc(2, sizeof(uint32_t));
 
 	int i = 0;
 	//printHex(testT);
@@ -210,8 +297,7 @@ int main(int argc, char *argv[]) {
 	/*            Encrypt            */
 	/*								 */
 
-	unsigned long * rollingTVal = R;
-	unsigned long * tmp1; //used for freeing
+	uint32_t * rollingTVal = R;
 	//printf("mmm with 0x0A\n");
 	//printf("Plaintext: ");
 	//printHex(testT);
@@ -219,32 +305,24 @@ int main(int argc, char *argv[]) {
 	testT = bitwiseMMM(testT, Rsq, PQ); //testT is now   TR mod PQ
 
 	if(E & 1) {
-		//printf("needed a power, 1\n");
+		printf("needed a power, 1\n");
 		rollingTVal = bitwiseMMM(rollingTVal, testT, PQ); //get T^1 if we need it
-		//free(tmp1); want this eventually since tmp1 is R but we need it for decrypting in the same c file
-		tmp1 = rollingTVal;
 	}
 	//printHex(rollingTVal);
 	//printf("\naaaaaaaaaaaaaaa\n");
 	tToPowerOf2 = bitwiseMMM(testT, testT, PQ); //T^2R
 	//free(testT);
 	
-
-	unsigned long * tmp2 = tToPowerOf2; //used to free the old tToPowerOf2 chunk
-	for(i = 1; i < 3; i++){ //17 is bit length of E
+	for(i = 1; i < 17; i++){ //17 is bit length of E
 		if(E & (1 << i)) {
-			//printf("needed a power, %d\n", i);
+			printf("needed a power, %d\n", i+1);
 			rollingTVal = bitwiseMMM(rollingTVal, tToPowerOf2, PQ);
-			//free(tmp1);
-			tmp1 = rollingTVal;
 		}
 		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ); //get the next power of 2
-		//free(tmp2);
-		tmp2 = tToPowerOf2;
 	}
 
 	//descale (T^n)*R
-	unsigned long * one = calloc(1, sizeof(unsigned long));
+	uint32_t * one = calloc(2, sizeof(uint32_t));
 	one[0] = 1;
 	rollingTVal = bitwiseMMM(rollingTVal, one, PQ);
 
@@ -253,17 +331,9 @@ int main(int argc, char *argv[]) {
 	//printf("\n");
 
 
-
+	printHex(rollingTVal); newline
 	//testT = copy1024(testT, rollingTVal); //set the input to decrypt to be the encrypted text
 	testT = rollingTVal;
-
-
-
-
-
-
-
-
 
 
 
@@ -276,24 +346,17 @@ int main(int argc, char *argv[]) {
 
 	if(D[0] & 1) {
 		rollingTVal = bitwiseMMM(rollingTVal, testT, PQ); //get T^1 if we need it
-		//free(tmp1);
-		tmp1 = rollingTVal;
 	}
 
 	tToPowerOf2 = bitwiseMMM(testT, testT, PQ); //T^2R
-	//free(testT);
 	//decrypt
 
-	tmp2 = tToPowerOf2; //used to free the old tToPowerOf2 chunk
-	for(i = 1; i < 7; i++){ //1024 is length of D
+	for(i = 1; i < 56; i++){ // 56 is bit length of D
 		if(D[i/32] & (1 << i%32)) {
+			printf("needed a power, %d\n", i+1);
 			rollingTVal = bitwiseMMM(rollingTVal, tToPowerOf2, PQ);
-			//free(tmp1);
-			tmp1 = rollingTVal;
 		}
 		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ); //get the next power of 2
-		//free(tmp2);
-		tmp2 = tToPowerOf2;
 	}
 
 	//descale (T^n)*R
@@ -302,9 +365,9 @@ int main(int argc, char *argv[]) {
 	//printHex(rollingTVal); //should be plaintext now
 	//printf("\n");
 	if(rollingTVal[0] != ptn) {
-		printf("BAD BOI: %lu\n", ptn);
+		printf("BAD BOI: %u\n", ptn);
 	}
-}
+//}*/
 	return 0;
 }	
 
