@@ -59,8 +59,8 @@ int alargerequalb1024(uint32_t * a, uint32_t * b){
 uint32_t * subtract1024(uint32_t * T, uint32_t * M){ 
 	uint32_t tmpT;
 	uint32_t tmpM;
-	unsigned int cfi;
-	unsigned int carryCheckBit;
+	uint32_t cfi;
+	uint32_t carryCheckBit;
 
 	register int i = 0;
 	for(; i < 64; i++){
@@ -90,8 +90,8 @@ uint32_t * subtract1024(uint32_t * T, uint32_t * M){
 uint32_t * bitwiseMMM(uint32_t * y, uint32_t * x, uint32_t * PQptr) {
 	int i;
 	uint32_t * T = calloc(2, sizeof(uint32_t));
-	unsigned char xi;
-	unsigned char eta;
+	uint32_t xi;
+	uint32_t eta;
 	//printSmolBinary(x);
 	//printSmolBinary(y);
 	//printSmolBinary(PQptr);
@@ -260,7 +260,6 @@ void print64Hex(uint64_t input) {
 }
 
 int main(int argc, char *argv[]) {
-
 	uint32_t ptn = 0x0058afff;
 	//for(ptn = 0; ptn < 133; ptn++) {
 	uint32_t * D = calloc(2, sizeof(uint32_t));
@@ -282,92 +281,58 @@ int main(int argc, char *argv[]) {
 	R[1] = 0x00800000; 
 
 	uint32_t * testT = calloc(2, sizeof(uint32_t));
-	testT[0] = ptn;//0x0A; //10
-	//printf("TestT: ");
-	//printSmolBinary(testT);
-	//printf("\n");
+	testT[0] = ptn;
 	
+	/////////////////////start encrypt//////////////////////////
+
+	uint32_t * rollingTVal = R; //this is the value that will end up our encrypted text
+								//it needs to start off as R in case we don't use T^0 -- check this
+
 	uint32_t * tToPowerOf2 = calloc(2, sizeof(uint32_t));
-
-	int i = 0;
-	//printHex(testT);
-	//printf("\n\n\n");
-
-	/*								 */
-	/*            Encrypt            */
-	/*								 */
-
-	uint32_t * rollingTVal = R;
-	//printf("mmm with 0x0A\n");
-	//printf("Plaintext: ");
-	//printHex(testT);
-	//printf("\n");
-	testT = bitwiseMMM(testT, Rsq, PQ); //testT is now   TR mod PQ
+	tToPowerOf2 = copy1024(tToPowerOf2, testT); // = T
+	tToPowerOf2 = bitwiseMMM(tToPowerOf2, Rsq, PQ); // = TR mod PQ
 
 	if(E & 1) {
-		printf("needed a power, 1\n");
-		rollingTVal = bitwiseMMM(rollingTVal, testT, PQ); //get T^1 if we need it
+		rollingTVal = bitwiseMMM(tToPowerOf2, rollingTVal, PQ);
 	}
-	//printHex(rollingTVal);
-	//printf("\naaaaaaaaaaaaaaa\n");
-	tToPowerOf2 = bitwiseMMM(testT, testT, PQ); //T^2R
-	//free(testT);
-	
-	for(i = 1; i < 17; i++){ //17 is bit length of E
+	int i;
+	for(i = 1; i < 17; i++){
+		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ);
 		if(E & (1 << i)) {
-			printf("needed a power, %d\n", i+1);
 			rollingTVal = bitwiseMMM(rollingTVal, tToPowerOf2, PQ);
 		}
-		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ); //get the next power of 2
 	}
-
-	//descale (T^n)*R
+	
+	//descale (T^E)*R
 	uint32_t * one = calloc(2, sizeof(uint32_t));
 	one[0] = 1;
 	rollingTVal = bitwiseMMM(rollingTVal, one, PQ);
-
-	//printf("Encrypted value: ");
-	//printHex(rollingTVal);
-	//printf("\n");
-
-
 	printHex(rollingTVal); newline
-	//testT = copy1024(testT, rollingTVal); //set the input to decrypt to be the encrypted text
-	testT = rollingTVal;
+	/////////////////////end encrypt////////////////////////////
 
+	testT = copy1024(testT, rollingTVal); //set the input to decrypt to be the encrypted text, C
 
-
-	/*								 */
-	/*            Decrypt            */
-	/*								 */
+	/////////////////////start decrypt//////////////////////////
 	
 	rollingTVal = R;
-	testT = bitwiseMMM(testT, Rsq, PQ); //testT is now   TR mod PQ
+
+	tToPowerOf2 = calloc(2, sizeof(uint32_t));
+	tToPowerOf2 = copy1024(tToPowerOf2, testT); // = C mod PQ
+	tToPowerOf2 = bitwiseMMM(tToPowerOf2, Rsq, PQ); // = CR mod PQ
 
 	if(D[0] & 1) {
-		rollingTVal = bitwiseMMM(rollingTVal, testT, PQ); //get T^1 if we need it
+		rollingTVal = bitwiseMMM(tToPowerOf2, rollingTVal, PQ);
 	}
-
-	tToPowerOf2 = bitwiseMMM(testT, testT, PQ); //T^2R
-	//decrypt
-
-	for(i = 1; i < 56; i++){ // 56 is bit length of D
+	for(i = 1; i < 55; i++) {
+		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ);
 		if(D[i/32] & (1 << i%32)) {
-			printf("needed a power, %d\n", i+1);
 			rollingTVal = bitwiseMMM(rollingTVal, tToPowerOf2, PQ);
 		}
-		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ); //get the next power of 2
 	}
-
-	//descale (T^n)*R
+	//rollingTVal should now be (C^D)R mod PQ, needs descale
 	rollingTVal = bitwiseMMM(rollingTVal, one, PQ);
-	//printf("This is the decrypted value: ");
-	//printHex(rollingTVal); //should be plaintext now
-	//printf("\n");
-	if(rollingTVal[0] != ptn) {
-		printf("BAD BOI: %u\n", ptn);
-	}
-//}*/
+
+	printHex(rollingTVal); newline
+
 	return 0;
 }	
-
