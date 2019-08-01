@@ -43,7 +43,6 @@ uint32_t * add1024(uint32_t * a, uint32_t * b) {
 int alargerequalb1024(uint32_t * a, uint32_t * b){
 	register int i;
 	for(i = 63; i >= 0; i--){
-		//temp = a[1-i]-b[1-i];
 		uint32_t abit = a[i/32] & (1 << i%32);
 		uint32_t bbit = b[i/32] & (1 << i%32);
 		if(abit && !bbit) return 1;
@@ -260,6 +259,7 @@ void print64Hex(uint64_t input) {
 }
 
 int main(int argc, char *argv[]) {
+	printf("%lu - 32\n \n", sizeof(uint32_t));
 	uint32_t ptn = 0x0058afff;
 	//for(ptn = 0; ptn < 133; ptn++) {
 	uint32_t * D = calloc(2, sizeof(uint32_t));
@@ -291,12 +291,12 @@ int main(int argc, char *argv[]) {
 	uint32_t * tToPowerOf2 = calloc(2, sizeof(uint32_t));
 	tToPowerOf2 = copy1024(tToPowerOf2, testT); // = T
 	tToPowerOf2 = bitwiseMMM(tToPowerOf2, Rsq, PQ); // = TR mod PQ
-
+	newline printHex(tToPowerOf2); newline
 	if(E & 1) {
 		rollingTVal = bitwiseMMM(tToPowerOf2, rollingTVal, PQ);
 	}
 	int i;
-	for(i = 1; i < 17; i++){
+	for(i = 1; i < 17; i++){ //17 is bit length of E
 		tToPowerOf2 = bitwiseMMM(tToPowerOf2, tToPowerOf2, PQ);
 		if(E & (1 << i)) {
 			rollingTVal = bitwiseMMM(rollingTVal, tToPowerOf2, PQ);
