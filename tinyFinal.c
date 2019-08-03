@@ -173,14 +173,14 @@ int main(int argc, char *argv[]) {
 	uint32_t * inputText = calloc(28, sizeof(uint32_t));
 	int j = 0;
 
-	//srand(time(NULL)); //TODO: uncomment this
+	srand(time(NULL)); //TODO: uncomment this
 	for (j = 0; j < 28; j++)
 	{
 		int randy = rand();
 		inputText[j] = (randy % 0xFFFFFFFE)+1;
-		printHex(inputText+j); printf(" ");
+		//printHex(inputText+j); printf(" ");
 	} //have to process this in 7-bit chunks
-	newline
+	//newline
 	uint32_t * outputText = calloc(28, sizeof(uint32_t));
 	j = 0;
 
@@ -207,7 +207,8 @@ int main(int argc, char *argv[]) {
 
 	for(j = 0; j < 128; j++){
 		tToPowerOf2[0] = splitInputChunks[j];
-		printHex(splitInputChunks+j); printf(" ");
+		testT[0] = splitInputChunks[j];
+		//printHex(splitInputChunks+j); printf(" ");
 		int i = 0;
 		//printHex(testT);
 		//printf("\n\n\n");
@@ -220,7 +221,7 @@ int main(int argc, char *argv[]) {
 		uint32_t * tmp1; //used for freeing
 		//printf("mmm with 0x0A\n");
 		//printf("Plaintext: ");
-		//printHex(testT);
+		//printHex(tToPowerOf2); newline
 		//printf("\n");
 		testT = bitwiseMMM(testT, Rsq, PQ); //testT is now 	\  TR mod PQ
 		if(E & 1) {
@@ -254,8 +255,7 @@ int main(int argc, char *argv[]) {
 		rollingTVal = bitwiseMMM(rollingTVal, one, PQ);
 
 		//printf("Encrypted value: ");
-		//printHex(rollingTVal);
-		//printf("\n");
+		//printHex(rollingTVal); newline
 
 		testT = rollingTVal;
 
@@ -295,17 +295,17 @@ int main(int argc, char *argv[]) {
 		//printf("This is the decrypted value: ");
 		//printHex(rollingTVal); //should be plaintext now
 		//printf("\n");
-		if(rollingTVal[0] != ptn) {
+		if(rollingTVal[0] != splitInputChunks[j]) {
 			printf("bad boi\n");
 			//printf("BAD BOI: %lu\n", ptn);
 		}
 		else {
-			//printf("Decrypted again:");
-			//printHex(rollingTVal);
-			//newline
+		//	printf("Decrypted again:");
+		//	printHex(rollingTVal);
+		//	newline
 		}
 	}
-	newline
+	//newline
 	return 0;
 }	
 
