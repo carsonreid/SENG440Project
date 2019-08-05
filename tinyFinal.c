@@ -120,28 +120,6 @@ uint32_t * bitwiseMMM(uint32_t * y, uint32_t * x, uint32_t * PQptr) {
 	return T;
 }
 
-void printSmolBinary(uint32_t input[]) {
-	int i = 0;
-	int j = 0;
-	while (i >= 0) {
-		for(j = 31; j >= 0; j--){
-			if ((input[i] >> (j)) & 1)
-				printf("1");
-			else
-				printf("0");
-		}
-		
-		if(i == 0)
-			;
-		else {
-			printf(" | ");
-		}
-		i--;
-	}
-	printf("\n");
-}
-
-
 uint32_t * copy1024(uint32_t * copyTo, uint32_t * copyFrom){
 	int i;
 	for(i = 0; i < 1; i++){
@@ -150,19 +128,10 @@ uint32_t * copy1024(uint32_t * copyTo, uint32_t * copyFrom){
 	return copyTo;
 }
 
-void printHex(uint32_t * input) {
-	int i = 0;
-	for(; i >= 0; i--){
-		//printf("%"PRIx32, input[i]);
-		printf("%08X", input[i]);
-	}
-	fflush(stdout);
-}
-
 uint32_t * split7Bits(uint32_t * inputArray) {
-	uint32_t * splitArray = calloc(128, sizeof(uint32_t));
+	uint32_t * splitArray = calloc(1280, sizeof(uint32_t));
 	int i;
-	for(i = 0; i < 896; i++) {
+	for(i = 0; i < 8960; i++) {
 		splitArray[i/7] |= (((inputArray[i/32] & (1 << 31-i%32)) >> 31-i%32) << 6-i%7);
 	}
 	return splitArray;
@@ -170,19 +139,16 @@ uint32_t * split7Bits(uint32_t * inputArray) {
 
 int main(int argc, char *argv[]) {
 	uint32_t ptn = 0;
-	uint32_t * inputText = calloc(28, sizeof(uint32_t));
+	uint32_t * inputText = calloc(280, sizeof(uint32_t));
 	int j = 0;
 
 	srand(time(NULL)); //TODO: uncomment this
-	for (j = 0; j < 28; j++)
+	for (j = 0; j < 280; j++)
 	{
 		int randy = rand();
 		inputText[j] = (randy % 0xFFFFFFFE)+1;
 		//printHex(inputText+j); printf(" ");
 	} //have to process this in 7-bit chunks
-	//newline
-	uint32_t * outputText = calloc(28, sizeof(uint32_t));
-	j = 0;
 
 	uint32_t * D = calloc(1, sizeof(uint32_t));
 	D[0] = 65;
